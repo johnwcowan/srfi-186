@@ -59,25 +59,41 @@ convenience is served.</p>
 
 <h1>Specification</h1>
 
+<h2>Codecs</h2>
 <p>
 Several different character encoding schemes exist that describe standard ways to
 encode characters and strings as byte sequences and to decode those
 sequences.
 Within this document, a </a><em>codec</em> is an immutable Scheme
-object that represents a Unicode or similar encoding scheme.</p>
+object that represents a specific encoding scheme.
+A codec has one or more names, represented as strings,
+and whatever other properties it
+requires in order to implement specific rules for
+encoding and decoding.</p>
+<h2>End-of-line styles</h2>
 <p>
 An </a><em>end-of-line style</em> is a symbol that
 describes how a textual port transcodes representations of
 line endings.
-The symbols <code>lf</code> and <code>none</code> mean
-that no newline conversion is done.
-The symbol <code>crlf</code> means that after decoding
-with a codec, the sequence <code>CRLF</code>, that is,
-a <code>#\return</code> followed by a <code>#\newline</code>,
-is replaced by <code>#\newline</code>.
-Correspondingly, the reverse is done before encoding.
+In order to conform to this SRFI, implementations must
+support at least three kinds of line endings:
+a U+000A (newline) character,
+a U+000D (return) character, and
+an U+000A followed by a U+000D (a CRLF sequence).
+Implementations may support other line endings as well.</p>
+<p>
+The end-of-line style symbol <code>none</code>
+means that no conversion is performed in either direction.
+On an input port, any other symbol will convert
+any line ending into a <code>#\newline</code>;
+all other characters remain the same.
+On an output port, the symbol <code>crlf</code> causes
+a <code>#\newline</code> to be output as a CRLF sequence;
+all other characters remain the same.
+The symbol <code>lf</code> means
+that no conversion is performed.
 Implementations may support additional symbols.</p>
-
+<h2>Error-handling modes</h2>
 <p>
 An <em>error-handling mode</em> is a symbol that
 specifies the behavior
@@ -87,7 +103,7 @@ errors.</p>
 If a textual input operation encounters an invalid or incomplete
 character encoding,
 then if the error-handling mode is <code>replace</code>, the replacement
-it is treated as the character U+FFFD (or if that character is
+it is treated as the character U+FFFD, or if that character is
 not representable by the implementation or is not permitted in
 strings, then by the character U+003F (question mark).
 But if the error-handling mode is <code>raise</code>,
@@ -107,20 +123,23 @@ an error satisfying <code>i/o-encoding-error?</code> is raised,
 and encoding continues with the next character.
 </p>
 <p>
-Implementations may support additional symbols.
+Implementations may support additional symbols.</p>
+<h2>Transcoders</h2>
 <p>
 A </a><em>transcoder</em> is an immutable Scheme object that combines
 a codec, an end-of-line style, and an error-handling mode.
 Each transcoder represents some specific bidirectional (but not
 necessarily lossless), possibly stateful translation between byte
 sequences and Unicode characters and strings.
-Every transcoding can decode bytes as characters and encode characters as bytes.
+Every transcoder can decode bytes as characters
+and encode characters as bytes.
 </p>
 <h2>Procedures</h2>
 <div><code>(</a>make-codec <i>string</i>)</code></div>
-<p>Returns a codec representing the character encoding scheme
-whose standard name is the case-insensitive string <i>string</i>.</p>
-<p>Standard character encoding names for HTML can be found at
+<p>Returns a codec representing
+the character encoding scheme one of whose
+whose names is the case-insensitive string <i>string</i>.</p>
+<p>Some  character encoding names can be found at
 <a href="https://encoding.spec.whatwg.org/#names-and-labels">
 the WHATWG encoding specification</a>, and implementations
 should recognize and support all of these.
@@ -140,8 +159,12 @@ an error is signaled.</p>
 <div><code>(</a>utf-16-codec<i></i>)</code></div>
 <p>
 These are predefined codecs for the ISO 8859-1, UTF-8,
-and UTF-16 encoding schemes.</p>
-<p>
+and UTF-16 encoding schemes.
+When decoding, the implementation must respect any BOM present, but
+the implementation may assume either endianness if no BOM is present,
+but if no BOM is present, the implementation may assume either endianness.
+When encoding, whether a BOM is output and what endianness is used
+are implementation-dependent.
 A call to any of these procedures returns a value that is equal in the
 sense of <code>eqv?</code> to the result of any other call to the same
 procedure.
